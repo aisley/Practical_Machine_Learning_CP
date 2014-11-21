@@ -1,0 +1,96 @@
+---
+
+output: html_document
+---
+
+```{r Lib_DataLoad, echo = FALSE, warning=FALSE}
+
+setwd("C:\\Users\\Andy\\SkyDrive\\Documents\\RPrograming\\Practical machine Learning\\CP\\Practical_Machine_Learning_CP")
+library(knitr);
+library(caret);
+library(randomForest)
+set.seed(1313)
+```
+
+#Practical Machine Learning Class Project
+
+##Executive Summary
+
+This class project is designed to test our ability to accurately predict how well 6 different people performed barbell lifts.  For this assignment we will use data collected from activity monitoring devices and supplied by Groupware@LES: http://groupware.les.inf.puc-rio.br/har.  
+
+6 people were asked to perform the barbell lifts correctly and in 5 different incorrect ways. From this data we will determine if a machine learning model can accurately predict how the person performed the lift.
+
+The training data for this project are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+##Exploratory Data Analysis and Data Loading
+```{r 'Data Loading', echo=TRUE}
+# load data
+training <- read.csv("./data/pml-training.csv", header = TRUE, na.strings=c("", "NA", "#DIV/0!"))
+testing <- read.csv("./data/pml-testing.csv", header = TRUE, na.strings=c("", "NA", "#DIV/0!"))
+
+#summary(training)
+#str(training)
+
+```
+The data needs to be cleaned up before its usable.  
+1) During the load process all blank('""'), '#DIV/0' and 'NA' values were converted to 'NA'. 
+2) Remove the first 6 rows as they will have little influance in the predictions
+3) Remove any Column that contain mostly N/A
+
+```{r 'Data Cleansing'}
+training.clean <- training[,-(1:7)]
+training.clean <- training.clean[colSums(is.na(training.clean)) ==0]
+training.clean <- training.clean[colSums(training.clean == "") ==0]
+testing.clean <- testing[,-(1:7)]
+```
+
+Lets split the cleaned training data in to a training and validation data set in a splt of 70% - 30% split
+
+```{r 'Split the Cleaned Data'}
+index <- createDataPartition(training.clean$classe, p=.7, list=FALSE)
+training.train <-training.clean[index,]
+training.validate <- training.clean[-index,]
+```
+
+
+##Modeling
+I have picked the Random Forest model to try first for predicting our outcome.  This decision is based in the fact that there does not seem to be a any storg predictors in the remaining columns.  
+
+```{r 'Model Random Forest'}
+FM <- train(training.train$classe~., method="rf", data=training.train,trControl=trainControl(method="cv",10))
+
+ModelPrediction <- predict(FM, training.validate)
+confusionMatrix(training.validate$classe, ModelPrediction)
+```
+The random forests algorithm generated a very accurate model with accuracy close to 1(99.2%). 
+
+##Conclusions and prepare Test Data for submittion
+
+The confusion matrix shows the model to be 99% accurate.  Therefore, I expect the submitted test to be correct.
+
+
+Prepare the submission. (using COURSERA provided code)
+```{r 'Prepare data for submittion'}
+
+# final model
+FM$finalModel
+
+# prediction
+(prediction <- as.character(predict(FM, testing.clean)))
+
+# write prediction files
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("./prediction/problem_id_", i, ".txt")
+    write.table(x[i], file = filename, quote = FALSE, row.names = FALSE, col.names = FALSE)
+  }
+}
+pml_write_files(prediction)
+```
