@@ -86,6 +86,84 @@ training.clean &lt;- training.clean[colSums(is.na(training.clean)) ==0]
 training.clean &lt;- training.clean[colSums(training.clean == &quot;&quot;) ==0]
 testing.clean &lt;- testing[,-(1:7)]</code></pre>
 <p>Lets split the cleaned training data in to a training and validation data set in a splt of 70% - 30% split</p>
+<pre class="r"><code>index &lt;- createDataPartition(training.clean$classe, p=.7, list=FALSE)
+training.train &lt;-training.clean[index,]
+training.validate &lt;- training.clean[-index,]</code></pre>
+</div>
+<div id="modeling" class="section level2">
+<h2>Modeling</h2>
+<p>I have picked the Random Forest model to try first for predicting our outcome. This decision is based in the fact that there does not seem to be a any storg predictors in the remaining columns.</p>
+<pre class="r"><code>FM &lt;- train(training.train$classe~., method=&quot;rf&quot;, data=training.train,trControl=trainControl(method=&quot;cv&quot;,10))
+
+ModelPrediction &lt;- predict(FM, training.validate)
+confusionMatrix(training.validate$classe, ModelPrediction)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1672    0    1    0    1
+##          B    5 1134    0    0    0
+##          C    0    1 1019    6    0
+##          D    0    0   14  949    1
+##          E    0    3    1    3 1075
+## 
+## Overall Statistics
+##                                         
+##                Accuracy : 0.994         
+##                  95% CI : (0.992, 0.996)
+##     No Information Rate : 0.285         
+##     P-Value [Acc &gt; NIR] : &lt;2e-16        
+##                                         
+##                   Kappa : 0.992         
+##  Mcnemar's Test P-Value : NA            
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity             0.997    0.996    0.985    0.991    0.998
+## Specificity             1.000    0.999    0.999    0.997    0.999
+## Pos Pred Value          0.999    0.996    0.993    0.984    0.994
+## Neg Pred Value          0.999    0.999    0.997    0.998    1.000
+## Prevalence              0.285    0.193    0.176    0.163    0.183
+## Detection Rate          0.284    0.193    0.173    0.161    0.183
+## Detection Prevalence    0.284    0.194    0.174    0.164    0.184
+## Balanced Accuracy       0.998    0.998    0.992    0.994    0.998</code></pre>
+<p>The random forests algorithm generated a very accurate model with accuracy close to 1(99.2%).</p>
+</div>
+<div id="conclusions-and-prepare-test-data-for-submittion" class="section level2">
+<h2>Conclusions and prepare Test Data for submittion</h2>
+<p>The confusion matrix shows the model to be 99% accurate. Therefore, I expect the submitted test to be correct.</p>
+<p>Prepare the submission. (using COURSERA provided code)</p>
+<pre class="r"><code># final model
+FM$finalModel</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(x = x, y = y, mtry = param$mtry) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 27
+## 
+##         OOB estimate of  error rate: 0.76%
+## Confusion matrix:
+##      A    B    C    D    E class.error
+## A 3901    3    2    0    0     0.00128
+## B   22 2631    4    0    1     0.01016
+## C    0   14 2372   10    0     0.01002
+## D    0    0   36 2214    2     0.01687
+## E    0    0    5    5 2515     0.00396</code></pre>
+<pre class="r"><code># prediction
+(prediction &lt;- as.character(predict(FM, testing.clean)))</code></pre>
+<pre><code>##  [1] &quot;B&quot; &quot;A&quot; &quot;B&quot; &quot;A&quot; &quot;A&quot; &quot;E&quot; &quot;D&quot; &quot;B&quot; &quot;A&quot; &quot;A&quot; &quot;B&quot; &quot;C&quot; &quot;B&quot; &quot;A&quot; &quot;E&quot; &quot;E&quot; &quot;A&quot;
+## [18] &quot;B&quot; &quot;B&quot; &quot;B&quot;</code></pre>
+<pre class="r"><code># write prediction files
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0(&quot;./prediction/problem_id_&quot;, i, &quot;.txt&quot;)
+    write.table(x[i], file = filename, quote = FALSE, row.names = FALSE, col.names = FALSE)
+  }
+}
+pml_write_files(prediction)</code></pre>
 </div>
 </div>
 
